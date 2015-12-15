@@ -58,6 +58,12 @@ func (d MySQLDriver) Open(dsn string) (driver.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
+	if mc.cfg.timeout.Seconds() <= 0 {
+		mc.cfg.timeout, err = time.ParseDuration("30s")
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	// Connect to Server
 	if dial, ok := dials[mc.cfg.net]; ok {
@@ -73,7 +79,6 @@ func (d MySQLDriver) Open(dsn string) (driver.Conn, error) {
 	// Enable TCP Keepalives on TCP connections
 	if tc, ok := mc.netConn.(*net.TCPConn); ok {
 		timeout := time.Now().Add(mc.cfg.timeout)
-		tc.SetReadDeadline(timeout)
 		tc.SetDeadline(timeout)
 		if err := tc.SetKeepAlive(true); err != nil {
 			// Don't send COM_QUIT before handshake.
