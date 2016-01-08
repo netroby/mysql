@@ -13,6 +13,7 @@ import (
 	"crypto/tls"
 	"encoding/binary"
 	"fmt"
+	"net/url"
 	"testing"
 	"time"
 )
@@ -116,40 +117,57 @@ func TestDSNWithCustomTLS(t *testing.T) {
 	DeregisterTLSConfig("utils_test")
 }
 
+func TestDSNWithCustomTLS_queryEscape(t *testing.T) {
+	const configKey = "&%!:"
+	dsn := "user:password@tcp(localhost:5555)/dbname?tls=" + url.QueryEscape(configKey)
+	name := "foohost"
+	tlsCfg := tls.Config{ServerName: name}
+
+	RegisterTLSConfig(configKey, &tlsCfg)
+
+	cfg, err := parseDSN(dsn)
+
+	if err != nil {
+		t.Error(err.Error())
+	} else if cfg.tls.ServerName != name {
+		t.Errorf("Did not get the correct TLS ServerName (%s) parsing DSN (%s).", name, dsn)
+	}
+}
+
 func TestDSNUnsafeCollation(t *testing.T) {
 	_, err := parseDSN("/dbname?collation=gbk_chinese_ci&interpolateParams=true")
 	if err != errInvalidDSNUnsafeCollation {
-		t.Error("Expected %v, Got %v", errInvalidDSNUnsafeCollation, err)
+		t.Errorf("Expected %v, Got %v", errInvalidDSNUnsafeCollation, err)
 	}
 
 	_, err = parseDSN("/dbname?collation=gbk_chinese_ci&interpolateParams=false")
 	if err != nil {
-		t.Error("Expected %v, Got %v", nil, err)
+		t.Errorf("Expected %v, Got %v", nil, err)
 	}
 
 	_, err = parseDSN("/dbname?collation=gbk_chinese_ci")
 	if err != nil {
-		t.Error("Expected %v, Got %v", nil, err)
+		t.Errorf("Expected %v, Got %v", nil, err)
 	}
 
 	_, err = parseDSN("/dbname?collation=ascii_bin&interpolateParams=true")
 	if err != nil {
-		t.Error("Expected %v, Got %v", nil, err)
+		t.Errorf("Expected %v, Got %v", nil, err)
 	}
 
 	_, err = parseDSN("/dbname?collation=latin1_german1_ci&interpolateParams=true")
 	if err != nil {
-		t.Error("Expected %v, Got %v", nil, err)
+		t.Errorf("Expected %v, Got %v", nil, err)
 	}
 
 	_, err = parseDSN("/dbname?collation=utf8_general_ci&interpolateParams=true")
 	if err != nil {
-		t.Error("Expected %v, Got %v", nil, err)
+		t.Errorf("Expected %v, Got %v", nil, err)
 	}
 
 	_, err = parseDSN("/dbname?collation=utf8mb4_general_ci&interpolateParams=true")
 	if err != nil {
-		t.Error("Expected %v, Got %v", nil, err)
+		t.Errorf("Expected %v, Got %v", nil, err)
 	}
 }
 
